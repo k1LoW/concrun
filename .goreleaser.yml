@@ -1,0 +1,65 @@
+version: 2
+before:
+  hooks:
+    - go mod download
+    - go mod tidy
+builds:
+-
+  id: concrun-linux
+  env:
+    - CGO_ENABLED=0
+  goos:
+    - linux
+  goarch:
+    - amd64
+    - arm64
+  ldflags:
+    - -s -w -X github.com/k1LoW/concrun.version={{.Version}} -X github.com/k1LoW/concrun.commit={{.FullCommit}} -X github.com/k1LoW/concrun.date={{.Date}} -X github.com/k1LoW/concrun/version.Version={{.Version}}
+-
+  id: concrun-darwin
+  env:
+    - CGO_ENABLED=0
+  goos:
+    - darwin
+  goarch:
+    - amd64
+    - arm64
+  ldflags:
+    - -s -w -X github.com/k1LoW/concrun.version={{.Version}} -X github.com/k1LoW/concrun.commit={{.FullCommit}} -X github.com/k1LoW/concrun.date={{.Date}} -X github.com/k1LoW/concrun/version.Version={{.Version}}
+archives:
+-
+  id: concrun-archive
+  name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+  format_overrides:
+    - goos: darwin
+      format: zip
+  files:
+    - LICENSE
+    - CREDITS
+    - README.md
+    - CHANGELOG.md
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+nfpms:
+  -
+    id: concrun-nfpms
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}"
+    builds:
+    - concrun-linux
+    homepage: https://github.com/k1LoW/concrun
+    maintainer: Ken'ichiro Oyama <k1lowxb@gmail.com>
+    description: Run commands concurrently.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    epoch: 1
