@@ -13,6 +13,14 @@ Run commands concurrently.
 
 ```console
 $ concrun -c "echo hello" -c "echo world"
+--------------------------------------------------
+▶ echo world
+world
+---- [ exit code: 0, excution time: 10.425333ms ]
+--------------------------------------------------
+▶ echo hello
+hello
+---- [ exit code: 0, excution time: 10.968042ms ]
 ```
 
 ### Fail-fast execution
