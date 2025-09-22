@@ -53,13 +53,15 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		results, err := e.Run(cmd.Context())
-		if err != nil {
-			return err
-		}
+
+		resultCh := make(chan *exector.Result)
+		errCh := make(chan error)
+
+		go e.Run(cmd.Context(), resultCh, errCh)
 		exitCode := 0
 		killed := false
-		for _, r := range results {
+	L:
+		for r := range resultCh {
 			fmt.Println("--------------------------------------------------")
 			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", commandPointer, r.Command)
 			_, _ = os.Stdout.Write(r.Combined)
@@ -72,6 +74,19 @@ var rootCmd = &cobra.Command{
 			}
 			d := r.EndTime.Sub(r.StartTime)
 			fmt.Printf("---- [ exit code: %d, excution time: %s ]\n", r.ExitCode, d)
+			select {
+			case errr := <-errCh:
+				err = errr
+				break L
+			default:
+			}
+		}
+		if err != nil {
+			return err
+		}
+		err = <-errCh
+		if err != nil {
+			return err
 		}
 		if exitCode != 0 {
 			os.Exit(exitCode)

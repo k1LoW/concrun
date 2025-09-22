@@ -48,15 +48,19 @@ func New(commands []string, opts ...Option) (*Executor, error) {
 	return e, nil
 }
 
-func (e *Executor) Run(ctx context.Context) ([]*Result, error) {
+func (e *Executor) Run(ctx context.Context, ch chan<- *Result, errCh chan<- error) {
+	defer close(ch)
+	defer close(errCh)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	sh, err := exec.LookPath(e.shell)
 	if err != nil {
-		return nil, err
+		if errCh != nil {
+			errCh <- err
+		}
+		return
 	}
 	var eg errgroup.Group
-	var results []*Result
 	eg.SetLimit(runtime.GOMAXPROCS(0) - 1)
 	for _, c := range e.commands {
 		eg.Go(func() error {
@@ -78,7 +82,9 @@ func (e *Executor) Run(ctx context.Context) ([]*Result, error) {
 					StartTime: start,
 					EndTime:   time.Now(),
 				}
-				results = append(results, result)
+				if ch != nil {
+					ch <- result
+				}
 			}()
 			start = time.Now()
 			if err := cmd.Run(); err != nil {
@@ -97,7 +103,8 @@ func (e *Executor) Run(ctx context.Context) ([]*Result, error) {
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, err
+		if errCh != nil {
+			errCh <- err
+		}
 	}
-	return results, nil
 }
