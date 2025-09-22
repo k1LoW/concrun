@@ -147,20 +147,17 @@ func TestRun(t *testing.T) {
 			var results []*Result
 		L:
 			for r := range resultCh {
+				results = append(results, r)
 				select {
 				case errr := <-errCh:
 					err = errr
 					break L
 				default:
 				}
-				results = append(results, r)
 			}
-			select {
-			case errr := <-errCh:
-				err = errr
-			default:
+			if err == nil {
+				err = <-errCh
 			}
-
 			elapsed := time.Since(start)
 
 			if (err != nil) != tt.wantErr {

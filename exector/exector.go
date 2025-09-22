@@ -50,6 +50,7 @@ func New(commands []string, opts ...Option) (*Executor, error) {
 
 func (e *Executor) Run(ctx context.Context, ch chan<- *Result, errCh chan<- error) {
 	defer close(ch)
+	defer close(errCh)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	sh, err := exec.LookPath(e.shell)
@@ -105,7 +106,5 @@ func (e *Executor) Run(ctx context.Context, ch chan<- *Result, errCh chan<- erro
 		if errCh != nil {
 			errCh <- err
 		}
-		return
 	}
-	return
 }

@@ -81,11 +81,10 @@ var rootCmd = &cobra.Command{
 			default:
 			}
 		}
-		select {
-		case errr := <-errCh:
-			err = errr
-		default:
+		if err != nil {
+			return err
 		}
+		err = <-errCh
 		if err != nil {
 			return err
 		}
