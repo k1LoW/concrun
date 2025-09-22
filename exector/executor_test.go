@@ -140,7 +140,27 @@ func TestRun(t *testing.T) {
 
 			ctx := context.Background()
 			start := time.Now()
-			results, err := e.Run(ctx)
+			resultCh := make(chan *Result)
+			errCh := make(chan error)
+
+			go e.Run(ctx, resultCh, errCh)
+			var results []*Result
+		L:
+			for r := range resultCh {
+				select {
+				case errr := <-errCh:
+					err = errr
+					break L
+				default:
+				}
+				results = append(results, r)
+			}
+			select {
+			case errr := <-errCh:
+				err = errr
+			default:
+			}
+
 			elapsed := time.Since(start)
 
 			if (err != nil) != tt.wantErr {
