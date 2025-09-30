@@ -16,14 +16,16 @@ import (
 const DefaultShell = "bash"
 
 type Executor struct {
-	commands []string
-	stdout   io.Writer
-	stderr   io.Writer
-	shell    string
-	failFast bool
+	commands             []string
+	stdout               io.Writer
+	stderr               io.Writer
+	shell                string
+	failFast             bool
+	maxRetriesPerCommand int
 }
 
 type Result struct {
+	Index     int
 	Command   string
 	Stdout    []byte
 	Stderr    []byte
@@ -31,6 +33,7 @@ type Result struct {
 	ExitCode  int
 	StartTime time.Time
 	EndTime   time.Time
+	Retries   int
 }
 
 func New(commands []string, opts ...Option) (*Executor, error) {
@@ -62,43 +65,74 @@ func (e *Executor) Run(ctx context.Context, ch chan<- *Result, errCh chan<- erro
 	}
 	var eg errgroup.Group
 	eg.SetLimit(runtime.GOMAXPROCS(0) - 1)
-	for _, c := range e.commands {
+	for i, c := range e.commands {
 		eg.Go(func() error {
-			cmd := exec.CommandContext(ctx, sh, "-c", c)
-			stdout := &bytes.Buffer{}
-			stderr := &bytes.Buffer{}
-			combined := &bytes.Buffer{}
-			cmd.Stdout = io.MultiWriter(stdout, combined)
-			cmd.Stderr = io.MultiWriter(stderr, combined)
-			exitCode := -1
-			var start time.Time
-			defer func() {
-				result := &Result{
-					Command:   c,
-					Stdout:    stdout.Bytes(),
-					Stderr:    stderr.Bytes(),
-					Combined:  combined.Bytes(),
-					ExitCode:  exitCode,
-					StartTime: start,
-					EndTime:   time.Now(),
-				}
-				if ch != nil {
-					ch <- result
-				}
-			}()
-			start = time.Now()
-			if err := cmd.Run(); err != nil {
-				var exitErr *exec.ExitError
-				if errors.As(err, &exitErr) {
-					if e.failFast {
-						cancel()
+			retries := 0
+			finished := false
+			lastExitCode := -1
+			for {
+				err := func() error {
+					cmd := exec.CommandContext(ctx, sh, "-c", c)
+					stdout := &bytes.Buffer{}
+					stderr := &bytes.Buffer{}
+					combined := &bytes.Buffer{}
+					cmd.Stdout = io.MultiWriter(stdout, combined)
+					cmd.Stderr = io.MultiWriter(stderr, combined)
+					exitCode := -1
+					start := time.Now()
+					defer func() {
+						result := &Result{
+							Index:     i,
+							Command:   c,
+							Stdout:    stdout.Bytes(),
+							Stderr:    stderr.Bytes(),
+							Combined:  combined.Bytes(),
+							ExitCode:  exitCode,
+							StartTime: start,
+							EndTime:   time.Now(),
+							Retries:   retries,
+						}
+						if ch != nil {
+							ch <- result
+						}
+						lastExitCode = exitCode
+						retries++
+					}()
+					if err := cmd.Run(); err != nil {
+						var exitErr *exec.ExitError
+						if !errors.As(err, &exitErr) {
+							return err
+						}
+						select {
+						case <-ctx.Done():
+							finished = true
+							return nil
+						default:
+						}
 					}
 					exitCode = cmd.ProcessState.ExitCode()
+					if exitCode == 0 {
+						finished = true
+						return nil
+					}
+					if retries >= e.maxRetriesPerCommand {
+						finished = true
+						return nil
+					}
 					return nil
+				}()
+				if err != nil {
+					return err
 				}
-				return err
+				if finished {
+					break
+				}
 			}
-			exitCode = cmd.ProcessState.ExitCode()
+			if e.failFast {
+				if lastExitCode != 0 {
+					cancel()
+				}
+			}
 			return nil
 		})
 	}

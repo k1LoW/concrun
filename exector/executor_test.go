@@ -25,6 +25,7 @@ func TestRun(t *testing.T) {
 			options:  nil,
 			wantResultsWithoutTimesSortedByCommand: []*Result{
 				{
+					Index:    0,
 					Command:  "echo hello",
 					Stdout:   []byte("hello\n"),
 					Stderr:   nil,
@@ -41,6 +42,7 @@ func TestRun(t *testing.T) {
 			options:  nil,
 			wantResultsWithoutTimesSortedByCommand: []*Result{
 				{
+					Index:    0,
 					Command:  "echo first",
 					Stdout:   []byte("first\n"),
 					Stderr:   nil,
@@ -48,6 +50,7 @@ func TestRun(t *testing.T) {
 					ExitCode: 0,
 				},
 				{
+					Index:    1,
 					Command:  "echo second",
 					Stdout:   []byte("second\n"),
 					Stderr:   nil,
@@ -64,6 +67,7 @@ func TestRun(t *testing.T) {
 			options:  nil,
 			wantResultsWithoutTimesSortedByCommand: []*Result{
 				{
+					Index:    0,
 					Command:  "false",
 					Stdout:   nil,
 					Stderr:   nil,
@@ -80,6 +84,7 @@ func TestRun(t *testing.T) {
 			options:  []Option{Shell("sh")},
 			wantResultsWithoutTimesSortedByCommand: []*Result{
 				{
+					Index:    0,
 					Command:  "echo shell-test",
 					Stdout:   []byte("shell-test\n"),
 					Stderr:   nil,
@@ -96,6 +101,7 @@ func TestRun(t *testing.T) {
 			options:  nil,
 			wantResultsWithoutTimesSortedByCommand: []*Result{
 				{
+					Index:    0,
 					Command:  "echo error message >&2",
 					Stdout:   nil,
 					Stderr:   []byte("error message\n"),
@@ -112,6 +118,7 @@ func TestRun(t *testing.T) {
 			options:  []Option{FailFast(true)},
 			wantResultsWithoutTimesSortedByCommand: []*Result{
 				{
+					Index:    0,
 					Command:  "false",
 					Stdout:   nil,
 					Stderr:   nil,
@@ -119,6 +126,7 @@ func TestRun(t *testing.T) {
 					ExitCode: 1,
 				},
 				{
+					Index:    1,
 					Command:  "sleep 10",
 					Stdout:   nil,
 					Stderr:   nil,
@@ -129,10 +137,55 @@ func TestRun(t *testing.T) {
 			within1Sec: true,
 			wantErr:    false,
 		},
+		{
+			name:     "with max retries per command option",
+			commands: []string{"false", "sleep 10"},
+			options:  []Option{MaxRetriesPerCommand(2), FailFast(true)},
+			wantResultsWithoutTimesSortedByCommand: []*Result{
+				{
+					Index:    0,
+					Command:  "false",
+					Stdout:   nil,
+					Stderr:   nil,
+					Combined: nil,
+					ExitCode: 1,
+					Retries:  0,
+				},
+				{
+					Index:    0,
+					Command:  "false",
+					Stdout:   nil,
+					Stderr:   nil,
+					Combined: nil,
+					ExitCode: 1,
+					Retries:  1,
+				},
+				{
+					Index:    0,
+					Command:  "false",
+					Stdout:   nil,
+					Stderr:   nil,
+					Combined: nil,
+					ExitCode: 1,
+					Retries:  2,
+				},
+				{
+					Index:    1,
+					Command:  "sleep 10",
+					Stdout:   nil,
+					Stderr:   nil,
+					Combined: nil,
+					ExitCode: -1,
+				},
+			},
+			within1Sec: false,
+			wantErr:    false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			e, err := New(tt.commands, tt.options...)
 			if err != nil {
 				t.Fatalf("failed to create executor: %v", err)
