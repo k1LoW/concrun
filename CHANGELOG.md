@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.3.0](https://github.com/k1LoW/concrun/compare/v0.2.0...v0.3.0) - 2025-09-30
+- feat: support retry ( `--max-retries-per-command` ) by @k1LoW in https://github.com/k1LoW/concrun/pull/6
+- feat: remove concurrency limit by @k1LoW in https://github.com/k1LoW/concrun/pull/8
+
 ## [v0.2.0](https://github.com/k1LoW/concrun/compare/v0.1.1...v0.2.0) - 2025-09-22
 - fix: fix to enable asynchronous output of results by @k1LoW in https://github.com/k1LoW/concrun/pull/5
 
