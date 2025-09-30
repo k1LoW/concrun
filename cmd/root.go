@@ -31,9 +31,10 @@ import (
 )
 
 var (
-	commands []string
-	shell    string
-	failFast bool
+	commands             []string
+	shell                string
+	failFast             bool
+	maxRetriesPerCommand int
 )
 
 const commandPointer = "▶"
@@ -48,6 +49,7 @@ var rootCmd = &cobra.Command{
 		opts := []exector.Option{
 			exector.Shell(shell),
 			exector.FailFast(failFast),
+			exector.MaxRetriesPerCommand(maxRetriesPerCommand),
 		}
 		e, err := exector.New(commands, opts...)
 		if err != nil {
@@ -58,7 +60,7 @@ var rootCmd = &cobra.Command{
 		errCh := make(chan error)
 
 		go e.Run(cmd.Context(), resultCh, errCh)
-		exitCode := 0
+		exitCodes := make(map[int]int)
 		killed := false
 	L:
 		for r := range resultCh {
@@ -69,9 +71,7 @@ var rootCmd = &cobra.Command{
 				killed = true
 				fmt.Fprintln(os.Stderr, "(command was terminated by signal)")
 			}
-			if r.ExitCode > exitCode {
-				exitCode = r.ExitCode
-			}
+			exitCodes[r.Index] = r.ExitCode
 			d := r.EndTime.Sub(r.StartTime)
 			fmt.Printf("---- [ exit code: %d, excution time: %s ]\n", r.ExitCode, d)
 			select {
@@ -87,6 +87,12 @@ var rootCmd = &cobra.Command{
 		err = <-errCh
 		if err != nil {
 			return err
+		}
+		exitCode := 0
+		for _, c := range exitCodes {
+			if exitCode < c {
+				exitCode = c
+			}
 		}
 		if exitCode != 0 {
 			os.Exit(exitCode)
@@ -108,4 +114,5 @@ func init() {
 	rootCmd.Flags().StringArrayVarP(&commands, "command", "c", []string{}, "command to run")
 	rootCmd.Flags().StringVarP(&shell, "shell", "s", exector.DefaultShell, "shell to use")
 	rootCmd.Flags().BoolVarP(&failFast, "fail-fast", "", false, "exit on first error")
+	rootCmd.Flags().IntVarP(&maxRetriesPerCommand, "max-retries-per-command", "", 0, "maximum number of retries per command (default 0)")
 }
