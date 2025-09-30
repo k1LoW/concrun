@@ -1,4 +1,4 @@
-package exector
+package executor
 
 import (
 	"context"

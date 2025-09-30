@@ -1,4 +1,4 @@
-package exector
+package executor
 
 import "github.com/k1LoW/errors"
 

@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/k1LoW/concrun/exector"
+	"github.com/k1LoW/concrun/executor"
 	"github.com/k1LoW/concrun/version"
 	"github.com/spf13/cobra"
 )
@@ -46,17 +46,17 @@ var rootCmd = &cobra.Command{
 	Version:      version.Version,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opts := []exector.Option{
-			exector.Shell(shell),
-			exector.FailFast(failFast),
-			exector.MaxRetriesPerCommand(maxRetriesPerCommand),
+		opts := []executor.Option{
+			executor.Shell(shell),
+			executor.FailFast(failFast),
+			executor.MaxRetriesPerCommand(maxRetriesPerCommand),
 		}
-		e, err := exector.New(commands, opts...)
+		e, err := executor.New(commands, opts...)
 		if err != nil {
 			return err
 		}
 
-		resultCh := make(chan *exector.Result)
+		resultCh := make(chan *executor.Result)
 		errCh := make(chan error)
 
 		go e.Run(cmd.Context(), resultCh, errCh)
@@ -112,7 +112,7 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().StringArrayVarP(&commands, "command", "c", []string{}, "command to run")
-	rootCmd.Flags().StringVarP(&shell, "shell", "s", exector.DefaultShell, "shell to use")
+	rootCmd.Flags().StringVarP(&shell, "shell", "s", executor.DefaultShell, "shell to use")
 	rootCmd.Flags().BoolVarP(&failFast, "fail-fast", "", false, "exit on first error")
 	rootCmd.Flags().IntVarP(&maxRetriesPerCommand, "max-retries-per-command", "", 0, "maximum number of retries per command (default 0)")
 }
