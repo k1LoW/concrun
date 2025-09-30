@@ -64,7 +64,7 @@ func (e *Executor) Run(ctx context.Context, ch chan<- *Result, errCh chan<- erro
 		return
 	}
 	var eg errgroup.Group
-	eg.SetLimit(runtime.NumCPU())
+	eg.SetLimit(runtime.GOMAXPROCS(0) - 1)
 	for i, c := range e.commands {
 		eg.Go(func() error {
 			retries := 0
