@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.3.2](https://github.com/k1LoW/concrun/compare/v0.3.1...v0.3.2) - 2026-09-28
+
+- ci: generate CREDITS with gocredits v1.0.0 from a make target by @k1LoW in https://github.com/k1LoW/concrun/pull/28
+- chore(deps): bump the dependencies group across 1 directory with 5 updates by @dependabot[bot] in https://github.com/k1LoW/concrun/pull/27
+- chore(deps): bump golang.org/x/sync from 0.21.0 to 0.22.0 in the dependencies group by @dependabot[bot] in https://github.com/k1LoW/concrun/pull/24
+
 ## [v0.3.1](https://github.com/k1LoW/concrun/compare/v0.3.0...v0.3.1) - 2026-06-21
 
 - chore: setup tagpr labels by @k1LoW in https://github.com/k1LoW/concrun/pull/9
